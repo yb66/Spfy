@@ -8,7 +8,19 @@ require 'uri'
 module Spfy
 
   # For tagging all exceptions that come through this library.
-  module Error; end
+  module Error
+    class Multi < StandardError
+      def initialize(*errors)
+        super( "Multiple errors!\n" + errors.map{|e| "  #{e.message}" }.join("\n"))
+      end
+    end
+
+    class PathNotExist < RuntimeError
+      def initialize(path)
+        super("#{path.to_path} does not exist")
+      end
+    end
+  end
 
 
   # Locations of the ERB templates
@@ -282,10 +294,11 @@ module Spfy
     def to_xml
       return "" if @paths.empty?
       mapped = []
+      @user_errors = []
       catch(:MaxTracksReached){
         @paths.each do |path|
           if !path.exist?
-            warn "#{path.to_path} does not exist"
+            @user_errors << Spfy::Error::PathNotExist.new(path)
             next
           end
           if path.directory?
@@ -317,7 +330,20 @@ module Spfy
     rescue => error
       # Tag any exceptions coming through this library
       error.extend(Spfy::Error)
-      raise
+      handle_multiple_errors error
+    ensure
+      handle_multiple_errors
+    end
+
+
+    def handle_multiple_errors *extras
+      if @user_errors.empty?
+        raise if $!
+      else
+        multi = Spfy::Error::Multi.new( *extras, *@user_errors )
+        @user_errors.clear
+        raise multi
+      end
     end
   end
 end

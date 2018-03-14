@@ -348,4 +348,24 @@ describe "Playlist" do
     Given(:playlist) { Spfy::Playlist.new( options ) }
     Then { expect { playlist.to_xml }.to raise_error(Spfy::Error) }
   end
+
+  context "Given paths that don't exist" do
+    Given(:options) {
+      {
+        "--title"       =>  nil,
+        "--creator"     =>  nil,
+        "--date"        =>  nil,
+        "--annotation"  =>  nil,
+        "--no-location" =>  false,
+        "--no-title"    =>  false,
+        "--no-artist"   =>  false,
+        "--no-album"    =>  false,
+        "--no-tracknum" =>  false,
+        "--max-tracks"  =>  10,
+        "PATHS"=>["spec/support/fixtures/albums/empt"],
+      }
+    }
+    Given(:playlist) { Spfy::Playlist.new( options ) }
+    Then { expect { playlist.to_xml }.to raise_error(Spfy::Error::Multi, "Multiple errors!\n  No tracks found in spec/support/fixtures/albums/empt\n  spec/support/fixtures/albums/empt does not exist") }
+  end
 end
